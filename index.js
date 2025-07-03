@@ -68,6 +68,41 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const update = req.body;
+      const products = {
+        $set: {
+          name: update.name,
+          category: update.category,
+          description: update.description,
+          price: update.price,
+          image: update.image,
+        },
+      };
+
+      const result = await productCollection.updateOne(filter, products);
+      res.send(result);
+    });
+
+
+    app.patch("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+
+      const updateDoc = {
+        $set: {
+          role: "admin",
+        },
+      };
+
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    
+
     app.post("/users", async (req, res) => {
       const users = req.body;
       const result = await userCollection.insertOne(users);
