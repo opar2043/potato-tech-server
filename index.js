@@ -31,6 +31,7 @@ async function run() {
     const productCollection = db.collection("products");
     const reviewCollection = db.collection("reviews");
     const userCollection = db.collection("users");
+    const orderCollection = db.collection("orders");
 
     app.post("/products", async (req, res) => {
       const products = req.body;
@@ -48,6 +49,9 @@ async function run() {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     });
+
+
+    // Products =======================================================
 
     app.get("/products", async (req, res) => {
       const mouse = req.mouse.mouse;
@@ -87,7 +91,22 @@ async function run() {
     });
 
 
-    app.patch("/users/:id", async (req, res) => {
+
+
+    // Users ====================================================
+
+    app.post("/users", async (req, res) => {
+      const users = req.body;
+      const result = await userCollection.insertOne(users);
+      res.send(result);
+    });
+
+    app.get("/users", async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+        app.patch("/users/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
@@ -101,16 +120,16 @@ async function run() {
       res.send(result);
     });
 
-    
+    // Orders  ==============================================
 
-    app.post("/users", async (req, res) => {
-      const users = req.body;
-      const result = await userCollection.insertOne(users);
+    app.post("/orders", async (req, res) => {
+      const orders = req.body;
+      const result = await orderCollection.insertOne(orders);
       res.send(result);
     });
 
-    app.get("/users", async (req, res) => {
-      const result = await userCollection.find().toArray();
+    app.get("/orders", async (req, res) => {
+      const result = await orderCollection.find().toArray();
       res.send(result);
     });
 
