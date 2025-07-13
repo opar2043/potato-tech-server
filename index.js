@@ -32,6 +32,7 @@ async function run() {
     const reviewCollection = db.collection("reviews");
     const userCollection = db.collection("users");
     const orderCollection = db.collection("orders");
+    const addtocartCollection = db.collection("addtocart");
 
     app.post("/products", async (req, res) => {
       const products = req.body;
@@ -133,6 +134,26 @@ async function run() {
       res.send(result);
     });
 
+
+    // Add To Cart ==============================================
+
+    app.post("/add-to-cart", async (req, res) => {
+      const addcart = req.body;
+      const result = await addtocartCollection.insertOne(addcart);
+      res.send(result);
+    });
+
+    app.get("/add-to-cart", async (req, res) => {
+      const result = await addtocartCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.delete("/add-to-cart/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await addtocartCollection.deleteOne(query);
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
     console.log(
