@@ -5,8 +5,17 @@ const PORT = process.env.PORT || 5001;
 
 const app = express();
 app.use(express.json()); // Parse JSON requests
-app.use(cors());
-
+// app.use(
+//   cors({
+//     origin: ["http://localhost:5173", "https://potato-tech-server.vercel.app/"],
+//     credentials: true,
+//   })
+// );
+app.use(
+  cors({
+    origin: "*",
+  })
+);
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 // const uri =
 //   "mongodb+srv://task-manager:8xV6VIRQIxbvQslA@cluster0.xfvkq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
@@ -51,20 +60,36 @@ async function run() {
       res.send(result);
     });
 
-
     // Products =======================================================
 
+    // app.get("/products", async (req, res) => {
+    //   try {
+    //     const mouse = req.query.mouse;
+    //     let query = {};
+
+    //     if (mouse) {
+    //       query.mouse = mouse;
+    //     }
+
+    //     const result = await productCollection.find(query).toArray();
+    //     res.send(result);
+    //   } catch (err) {
+    //     console.error("Error fetching products:", err.message);
+    //     res.status(500).send("Internal Server Error");
+    //   }
+    // });
+
     app.get("/products", async (req, res) => {
-      const mouse = req.mouse.mouse;
-      let query = {};
+  const category = req.query.category;
+  let query = {};
 
-      if (mouse) {
-        query.mouse = mouse;
-      }
+  if (category) {
+    query.category = category;
+  }
 
-      const result = await productCollection.find(query).toArray();
-      res.send(result);
-    });
+  const result = await productCollection.find(query).toArray();
+  res.send(result);
+});
 
     app.delete("/products/:id", async (req, res) => {
       const id = req.params.id;
@@ -83,16 +108,15 @@ async function run() {
           category: update.category,
           description: update.description,
           price: update.price,
-          image: update.image,
+          sub: update.sub || "",
+          images: update.images || [],
+          features: update.features || [], 
         },
       };
 
       const result = await productCollection.updateOne(filter, products);
       res.send(result);
     });
-
-
-
 
     // Users ====================================================
 
@@ -107,7 +131,7 @@ async function run() {
       res.send(result);
     });
 
-        app.patch("/users/:id", async (req, res) => {
+    app.patch("/users/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
@@ -133,7 +157,6 @@ async function run() {
       const result = await orderCollection.find().toArray();
       res.send(result);
     });
-
 
     // Add To Cart ==============================================
 
@@ -173,28 +196,3 @@ app.get("/", (req, res) => {
 
 // Start Server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-// const { MongoClient, ServerApiVersion } = require('mongodb');
-
-// // Create a MongoClient with a MongoClientOptions object to set the Stable API version
-// const client = new MongoClient(uri, {
-//   serverApi: {
-//     version: ServerApiVersion.v1,
-//     strict: true,
-//     deprecationErrors: true,
-//   }
-// });
-
-// async function run() {
-//   try {
-//     // Connect the client to the server	(optional starting in v4.7)
-//     await client.connect();
-//     // Send a ping to confirm a successful connection
-//     await client.db("admin").command({ ping: 1 });
-//     console.log("Pinged your deployment. You successfully connected to MongoDB!");
-//   } finally {
-//     // Ensures that the client will close when you finish/error
-//     await client.close();
-//   }
-// }
-// run().catch(console.dir);
