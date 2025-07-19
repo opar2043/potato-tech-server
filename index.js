@@ -108,6 +108,7 @@ async function run() {
           category: update.category,
           description: update.description,
           price: update.price,
+          stock: update.stock,
           sub: update.sub || "",
           images: update.images || [],
           features: update.features || [], 
