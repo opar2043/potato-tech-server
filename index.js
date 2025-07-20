@@ -80,16 +80,16 @@ async function run() {
     // });
 
     app.get("/products", async (req, res) => {
-  const category = req.query.category;
-  let query = {};
+      const category = req.query.category;
+      let query = {};
 
-  if (category) {
-    query.category = category;
-  }
+      if (category) {
+        query.category = category;
+      }
 
-  const result = await productCollection.find(query).toArray();
-  res.send(result);
-});
+      const result = await productCollection.find(query).toArray();
+      res.send(result);
+    });
 
     app.delete("/products/:id", async (req, res) => {
       const id = req.params.id;
@@ -107,11 +107,13 @@ async function run() {
           name: update.name,
           category: update.category,
           description: update.description,
+          sortdes: update.sortdes,
+          prePrice: update.prePrice,
           price: update.price,
           stock: update.stock,
           sub: update.sub || "",
           images: update.images || [],
-          features: update.features || [], 
+          features: update.features || [],
         },
       };
 
