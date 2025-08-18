@@ -147,8 +147,8 @@ async function run() {
       const result = await userCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
-    
-    app.patch("/users/:id", async (req, res) => {
+
+    app.patch("/users/cus/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
@@ -161,7 +161,6 @@ async function run() {
       const result = await userCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
-
 
     // Orders  ==============================================
 
@@ -195,6 +194,13 @@ async function run() {
       const result = await addtocartCollection.deleteOne(query);
       res.send(result);
     });
+
+    // delete all cart items (no user filtering)
+    app.delete("/add-to-cart", async (req, res) => {
+      const result = await addtocartCollection.deleteMany({});
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
     console.log(
