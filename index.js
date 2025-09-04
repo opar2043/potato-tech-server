@@ -3,26 +3,22 @@ const express = require("express");
 const cors = require("cors");
 const PORT = process.env.PORT || 5001;
 
-const app = express();
-app.use(express.json()); // Parse JSON requests
-// app.use(
-//   cors({
-//     origin: ["http://localhost:5173", "https://potato-tech-server.vercel.app/"],
-//     credentials: true,
-//   })
-// );
-app.use(
-  cors({
-    origin: "*",
-  })
-);
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-// const uri =
-//   "mongodb+srv://task-manager:8xV6VIRQIxbvQslA@cluster0.xfvkq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-const uri =
-  "mongodb+srv://potatoTech:CbGpBaja49fj3lC6@cluster0.xfvkq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+// Stripe payment
+const stripe = require("stripe")('sk_test_51QfDLMIXauIQhi9z2YKPjARUsDdX4HpGOsQ48gMIXOngdwchRhKZQPPrttr8yLRUPImn2fnZPOo6n9KpzcRuX91J00Os8ROo5u');
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const app = express();
+app.use(express.json());
+app.use(cors());
+
+
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+
+// Corrected MongoDB URI
+const uri = `mongodb+srv://hotel-booking:oyIaWLR7jM3tZiQy@cluster0.xfvkq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+
+// const uri = `mongodb+srv://${process.env.DB_User}:${process.env.DB_Pass}@cluster0.xfvkq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+
+// Create a MongoClient with options
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -33,189 +29,116 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
+    await client.connect(); // Connect to MongoDB
 
-    const db = client.db("potatoTech");
-    const productCollection = db.collection("products");
-    const reviewCollection = db.collection("reviews");
-    const userCollection = db.collection("users");
-    const orderCollection = db.collection("orders");
-    const addtocartCollection = db.collection("addtocart");
+    const db = client.db("hotel-booking");
+    const paymentCollection = db.collection("payments");
+    const bookingsCollection = db.collection("bookings");
+    const roomsCollection = db.collection("rooms");
+    const usersCollection = db.collection("users");
 
-    app.post("/products", async (req, res) => {
-      const products = req.body;
-      const result = await productCollection.insertOne(products);
-      res.send(result);
+    console.log("MongoDB connected successfully!");
+
+    // Stripe payment endpoint
+    app.post("/create-payment-intent", async (req, res) => {
+      const { grandTotal } = req.body;
+      const amount = parseFloat(grandTotal * 100);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({ clientSecret: paymentIntent.client_secret });
     });
 
-    app.post("/reviews", async (req, res) => {
-      const review = req.body;
-      const result = await reviewCollection.insertOne(review);
-      res.send(result);
-    });
-
-    app.get("/reviews", async (req, res) => {
-      const result = await reviewCollection.find().toArray();
-      res.send(result);
-    });
-
-    // Products =======================================================
-
-    // app.get("/products", async (req, res) => {
-    //   try {
-    //     const mouse = req.query.mouse;
-    //     let query = {};
-
-    //     if (mouse) {
-    //       query.mouse = mouse;
-    //     }
-
-    //     const result = await productCollection.find(query).toArray();
-    //     res.send(result);
-    //   } catch (err) {
-    //     console.error("Error fetching products:", err.message);
-    //     res.status(500).send("Internal Server Error");
-    //   }
-    // });
-
-    app.get("/products", async (req, res) => {
-      const category = req.query.category;
-      let query = {};
-
-      if (category) {
-        query.category = category;
+    // API Starts here
+    app.post("/bookings", async (req, res) => {
+      const bookings = req.body; // could be an array
+      if (Array.isArray(bookings)) {
+        await bookingsCollection.insertMany(bookings);
+      } else {
+        await bookingsCollection.insertOne(bookings);
       }
+      res.send({ message: "Booking saved" });
+    });
 
-      const result = await productCollection.find(query).toArray();
+    app.get("/bookings", async (req, res) => {
+      const result = await bookingsCollection.find().toArray();
       res.send(result);
     });
 
-    app.delete("/products/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await productCollection.deleteOne(query);
+    // Rooms API's
+
+    app.post("/rooms", async (req, res) => {
+      const rooms = req.body;
+      const result = await roomsCollection.insertOne(rooms);
       res.send(result);
     });
 
-    app.patch("/products/:id", async (req, res) => {
+    app.get("/rooms", async (req, res) => {
+      const result = await roomsCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.patch("/rooms/:id", async (req, res) => {
       const id = req.params.id;
+      const { status } = req.body; // receive new status from frontend
+
       const filter = { _id: new ObjectId(id) };
-      const update = req.body;
-      const products = {
-        $set: {
-          name: update.name,
-          category: update.category,
-          description: update.description,
-          sortdes: update.sortdes,
-          prePrice: update.prePrice,
-          price: update.price,
-          stock: update.stock,
-          sub: update.sub || "",
-          images: update.images || [],
-          features: update.features || [],
-        },
+      const updateDoc = {
+        $set: { status: status },
       };
 
-      const result = await productCollection.updateOne(filter, products);
+      const result = await roomsCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
 
-    // Users ====================================================
+    //  API's Users
 
     app.post("/users", async (req, res) => {
       const users = req.body;
-      const result = await userCollection.insertOne(users);
+      const result = await usersCollection.insertOne(users);
       res.send(result);
     });
 
     app.get("/users", async (req, res) => {
-      const result = await userCollection.find().toArray();
+      const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
-    app.patch("/users/:id", async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
+app.patch("/users/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { role } = req.body; // receive new role from frontend
 
-      const updateDoc = {
-        $set: {
-          role: "admin",
-        },
-      };
+    const filter = { _id: new ObjectId(id) };
+    const updateDoc = {
+      $set: { role: role }, // update role instead of status
+    };
 
-      const result = await userCollection.updateOne(filter, updateDoc);
-      res.send(result);
-    });
+    const result = await usersCollection.updateOne(filter, updateDoc);
+    res.send(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: "Failed to update user role" });
+  }
+});
 
-    app.patch("/users/cus/:id", async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
 
-      const updateDoc = {
-        $set: {
-          role: "customer",
-        },
-      };
 
-      const result = await userCollection.updateOne(filter, updateDoc);
-      res.send(result);
-    });
 
-    // Orders  ==============================================
-
-    app.post("/orders", async (req, res) => {
-      const orders = req.body;
-      const result = await orderCollection.insertOne(orders);
-      res.send(result);
-    });
-
-    app.get("/orders", async (req, res) => {
-      const result = await orderCollection.find().toArray();
-      res.send(result);
-    });
-
-    // Add To Cart ==============================================
-
-    app.post("/add-to-cart", async (req, res) => {
-      const addcart = req.body;
-      const result = await addtocartCollection.insertOne(addcart);
-      res.send(result);
-    });
-
-    app.get("/add-to-cart", async (req, res) => {
-      const result = await addtocartCollection.find().toArray();
-      res.send(result);
-    });
-
-    app.delete("/add-to-cart/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await addtocartCollection.deleteOne(query);
-      res.send(result);
-    });
-
-    // delete all cart items (no user filtering)
-    app.delete("/add-to-cart", async (req, res) => {
-      const result = await addtocartCollection.deleteMany({});
-      res.send(result);
-    });
-
-    // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
-  } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
+  } catch (err) {
+    console.error(err);
   }
 }
+
 run().catch(console.dir);
 
-// API Routes
+// API Route
 app.get("/", (req, res) => {
-  res.send("Potato Tech server Running");
+  res.send("Hotel Booking num 2 API Running...");
 });
 
 // Start Server
